@@ -76,6 +76,35 @@
     "ikun": {
       "api": "https://ikunzyapi.com/api.php/provide/vod",
       "name": "iKun资源"
+    },
+    "fengyin": {
+      "api": "https://api.fengyinapi.com/api.php/provide/vod",
+      "name": "风影资源",
+      "detail": "https://fengyinapi.com"
+    },
+    "kunyu": {
+      "api": "https://apikunyuzhan.com/api.php/provide/vod",
+      "name": "昆仑资源"
+    },
+    "mgtv": {
+      "api": "https://mgtv.api.mgtvzyapi.com/api.php/provide/vod",
+      "name": "芒果资源"
+    },
+    "bilibili": {
+      "api": "https://bilibili.api.websjapi.com/api.php/provide/vod",
+      "name": "哔哩哔哩资源"
+    },
+    "miaokankan": {
+      "api": "https://api.miaokankan.net/api.php/provide/vod",
+      "name": "喵看看"
+    },
+    "kuke": {
+      "api": "https://kukeapi.com/api.php/provide/vod",
+      "name": "酷客资源"
+    },
+    "mahuazy": {
+      "api": "https://mahuazy.com/api.php/provide/vod",
+      "name": "马花资源"
     }
   }
 }
