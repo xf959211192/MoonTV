@@ -237,11 +237,11 @@ export default function VideoCard({
 
   return (
     <div
-      className='group relative w-full rounded-lg bg-transparent transition-all duration-300 transform hover:-translate-y-1 hover:scale-[1.02]'
+      className='group relative w-full rounded-lg bg-transparent'
       onClick={handleClick}
     >
       {/* 海报容器 */}
-      <div className='relative aspect-[2/3] overflow-hidden rounded-lg transition-all duration-300'>
+      <div className='relative aspect-[2/3] overflow-hidden rounded-lg'>
         {/* 骨架屏 */}
         {!isLoaded && <ImagePlaceholder aspectRatio='aspect-[2/3]' />}
 
@@ -264,7 +264,7 @@ export default function VideoCard({
             <PlayCircleIcon
               size={52}
               strokeWidth={1}
-              className='text-white transition-all duration-300 transform hover:scale-110 hover:fill-green-500 rounded-full cursor-pointer opacity-80 hover:opacity-100'
+              className='rounded-full cursor-pointer play-icon-fixed'
             />
           )}
 
