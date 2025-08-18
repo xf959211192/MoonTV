@@ -1,10 +1,10 @@
-# MoonTV
+# xf-tv
 
 <div align="center">
   <img src="public/logo.png" alt="LibreTV Logo" width="120">
 </div>
 
-> 🎬 **MoonTV** 是一个开箱即用的、跨平台的影视聚合播放器。它基于 **Next.js 14** + **Tailwind&nbsp;CSS** + **TypeScript** 构建，支持多资源搜索、在线播放、收藏同步、播放记录、本地/云端存储，让你可以随时随地畅享海量免费影视内容。
+> 🎬 **xf-tv** 是一个开箱即用的、跨平台的影视聚合播放器。它基于 **Next.js 14** + **Tailwind&nbsp;CSS** + **TypeScript** 构建，支持多资源搜索、在线播放、收藏同步、播放记录、本地/云端存储，让你可以随时随地畅享海量免费影视内容。本项目基于 [MoonTV](https://github.com/MoonTechLab/LunaTV) 最后一个开源版本修改，移除版本信息自用。
 
 <div align="center">
 
@@ -373,6 +373,7 @@ MoonTV 支持标准的苹果 CMS V10 API 格式。
 
 ## 致谢
 
+- [LunaTV原Moontv](https://github.com/MoonTechLab/LunaTV) — 基于moontv最后一个开源版本去除版本信息自用。
 - [ts-nextjs-tailwind-starter](https://github.com/theodorusclarence/ts-nextjs-tailwind-starter) — 项目最初基于该脚手架。
 - [LibreTV](https://github.com/LibreSpark/LibreTV) — 由此启发，站在巨人的肩膀上。
 - [ArtPlayer](https://github.com/zhw2590582/ArtPlayer) — 提供强大的网页视频播放器。
