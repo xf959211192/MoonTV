@@ -84,35 +84,31 @@ let lastUpdated = 0;
 
 async function updateConfig() {
   const remoteConfigUrl = process.env.REMOTE_CONFIG_URL;
-  if (!remoteConfigUrl) {
-    throw new Error('[CONFIG_DEBUG] REMOTE_CONFIG_URL is not defined!');
+  let remoteConfig: ConfigFileStruct | null = null;
+  if (remoteConfigUrl) {
+    remoteConfig = await fetchRemoteConfig(remoteConfigUrl);
+  } else {
+    console.warn('[CONFIG_DEBUG] REMOTE_CONFIG_URL is not defined, falling back to local/compile-time config.');
   }
-
-  const remoteConfig = await fetchRemoteConfig(remoteConfigUrl);
 
   if (remoteConfig) {
     fileConfig = remoteConfig;
     console.log('Successfully loaded remote config.');
   } else {
-    // Fallback to local config if remote fetch fails
-    if (process.env.DOCKER_ENV === 'true') {
-      // eslint-disable-next-line @typescript-eslint/no-implied-eval
-      const _require = eval('require') as NodeRequire;
-      const fs = _require('fs') as typeof import('fs');
-      const path = _require('path') as typeof import('path');
+    // Fallback to local config if remote fetch fails or is not configured
+    // eslint-disable-next-line @typescript-eslint/no-implied-eval
+    const _require = eval('require') as NodeRequire;
+    const fs = _require('fs') as typeof import('fs');
+    const path = _require('path') as typeof import('path');
 
-      try {
-        const configPath = path.join(process.cwd(), 'config.json');
-        const raw = fs.readFileSync(configPath, 'utf-8');
-        fileConfig = JSON.parse(raw) as ConfigFileStruct;
-        console.log('Loaded local fallback config.');
-      } catch (error) {
-        console.error('Failed to load local fallback config, using compile-time config.');
-        fileConfig = runtimeConfig as unknown as ConfigFileStruct;
-      }
-    } else {
+    try {
+      const configPath = path.join(process.cwd(), 'config.json');
+      const raw = fs.readFileSync(configPath, 'utf-8');
+      fileConfig = JSON.parse(raw) as ConfigFileStruct;
+      console.log('Loaded local fallback config.');
+    } catch (error) {
+      console.error('Failed to load local fallback config, using compile-time config.');
       fileConfig = runtimeConfig as unknown as ConfigFileStruct;
-      console.log('Using compile-time config.');
     }
   }
   lastUpdated = Date.now();
@@ -381,8 +377,19 @@ export async function getConfig(): Promise<AdminConfig> {
     adminConfig.SiteConfig.DisableYellowFilter =
       process.env.NEXT_PUBLIC_DISABLE_YELLOW_FILTER === 'true';
 
-    // 合并文件中的源信息
-    fileConfig = runtimeConfig as unknown as ConfigFileStruct;
+    // 合并文件中的源信息（优先使用远程/本地文件配置，带缓存间隔）
+    const now2 = Date.now();
+    if (!fileConfig || now2 - lastUpdated >= REMOTE_CONFIG_UPDATE_INTERVAL) {
+      try {
+        await updateConfig();
+      } catch (e) {
+        console.warn('updateConfig failed in getConfig DB branch, fallback to runtimeConfig:', e);
+        fileConfig = runtimeConfig as unknown as ConfigFileStruct;
+      }
+    }
+    if (!fileConfig) {
+      fileConfig = runtimeConfig as unknown as ConfigFileStruct;
+    }
     const apiSiteEntries = Object.entries(fileConfig.api_site);
     const sourceConfigMap = new Map(
       (adminConfig.SourceConfig || []).map((s) => [s.key, s])
