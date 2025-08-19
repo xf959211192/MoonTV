@@ -1,9 +1,42 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, no-console, @typescript-eslint/no-non-null-assertion */
 
 import { getStorage } from '@/lib/db';
+import bs58 from 'bs58';
 
 import { AdminConfig } from './admin.types';
 import runtimeConfig from './runtime';
+
+// 24 hours
+const REMOTE_CONFIG_UPDATE_INTERVAL = 24 * 60 * 60 * 1000;
+
+async function fetchRemoteConfig(url: string): Promise<ConfigFileStruct | null> {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      console.error(`Failed to fetch remote config: ${response.statusText}`);
+      return null;
+    }
+
+    const text = await response.text();
+    try {
+      // Try to parse as JSON directly
+      return JSON.parse(text) as ConfigFileStruct;
+    } catch (e) {
+      // If JSON parsing fails, try to decode from Base58
+      try {
+        const decoded = bs58.decode(text);
+        const jsonString = Buffer.from(decoded).toString('utf-8');
+        return JSON.parse(jsonString) as ConfigFileStruct;
+      } catch (err) {
+        console.error('Failed to parse remote config (neither JSON nor Base58):', err);
+        return null;
+      }
+    }
+  } catch (error) {
+    console.error('Detailed error fetching or processing remote config:', error);
+    return null;
+  }
+}
 
 export interface ApiSite {
   key: string;
@@ -47,26 +80,54 @@ export const API_CONFIG = {
 // 在模块加载时根据环境决定配置来源
 let fileConfig: ConfigFileStruct;
 let cachedConfig: AdminConfig;
+let lastUpdated = 0;
+
+async function updateConfig() {
+  const remoteConfigUrl = process.env.REMOTE_CONFIG_URL;
+  if (!remoteConfigUrl) {
+    throw new Error('[CONFIG_DEBUG] REMOTE_CONFIG_URL is not defined!');
+  }
+
+  const remoteConfig = await fetchRemoteConfig(remoteConfigUrl);
+
+  if (remoteConfig) {
+    fileConfig = remoteConfig;
+    console.log('Successfully loaded remote config.');
+  } else {
+    // Fallback to local config if remote fetch fails
+    if (process.env.DOCKER_ENV === 'true') {
+      // eslint-disable-next-line @typescript-eslint/no-implied-eval
+      const _require = eval('require') as NodeRequire;
+      const fs = _require('fs') as typeof import('fs');
+      const path = _require('path') as typeof import('path');
+
+      try {
+        const configPath = path.join(process.cwd(), 'config.json');
+        const raw = fs.readFileSync(configPath, 'utf-8');
+        fileConfig = JSON.parse(raw) as ConfigFileStruct;
+        console.log('Loaded local fallback config.');
+      } catch (error) {
+        console.error('Failed to load local fallback config, using compile-time config.');
+        fileConfig = runtimeConfig as unknown as ConfigFileStruct;
+      }
+    } else {
+      fileConfig = runtimeConfig as unknown as ConfigFileStruct;
+      console.log('Using compile-time config.');
+    }
+  }
+  lastUpdated = Date.now();
+}
 
 async function initConfig() {
-  if (cachedConfig) {
+  const now = Date.now();
+  if (cachedConfig && now - lastUpdated < REMOTE_CONFIG_UPDATE_INTERVAL) {
     return;
   }
 
-  if (process.env.DOCKER_ENV === 'true') {
-    // eslint-disable-next-line @typescript-eslint/no-implied-eval
-    const _require = eval('require') as NodeRequire;
-    const fs = _require('fs') as typeof import('fs');
-    const path = _require('path') as typeof import('path');
+  await updateConfig();
 
-    const configPath = path.join(process.cwd(), 'config.json');
-    const raw = fs.readFileSync(configPath, 'utf-8');
-    fileConfig = JSON.parse(raw) as ConfigFileStruct;
-    console.log('load dynamic config success');
-  } else {
-    // 默认使用编译时生成的配置
-    fileConfig = runtimeConfig as unknown as ConfigFileStruct;
-  }
+  // The rest of the function will now use the fileConfig populated by updateConfig
+  // to merge with DB/admin settings.
   const storageType = process.env.NEXT_PUBLIC_STORAGE_TYPE || 'localstorage';
   if (storageType !== 'localstorage') {
     // 数据库存储，读取并补全管理员配置
@@ -410,20 +471,7 @@ export async function resetConfig() {
     }
   }
 
-  if (process.env.DOCKER_ENV === 'true') {
-    // eslint-disable-next-line @typescript-eslint/no-implied-eval
-    const _require = eval('require') as NodeRequire;
-    const fs = _require('fs') as typeof import('fs');
-    const path = _require('path') as typeof import('path');
-
-    const configPath = path.join(process.cwd(), 'config.json');
-    const raw = fs.readFileSync(configPath, 'utf-8');
-    fileConfig = JSON.parse(raw) as ConfigFileStruct;
-    console.log('load dynamic config success');
-  } else {
-    // 默认使用编译时生成的配置
-    fileConfig = runtimeConfig as unknown as ConfigFileStruct;
-  }
+  await updateConfig();
 
   const apiSiteEntries = Object.entries(fileConfig.api_site);
   const customCategories = fileConfig.custom_category || [];
